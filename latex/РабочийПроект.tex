@@ -1,0 +1,754 @@
+\section{Рабочий проект}
+
+Можно выделить несколько модулей, использованных при разработке
+виртуальной файловой системы: командный интепретатор, интерфейс виртуальной файловой системы, главная загрузочная запись, файловая система FAT-32, файловая система ISO-9660(CDFS), виртуальная файловая система, работа с блоками диска, драйвер ATA.
+
+\subsection{Модуль "<shell.lsp">}
+
+Функции модуля интерфейса виртуальной файловой системы представлены в таблице \ref{cmd:table}.
+
+\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
+\begin{xltabular}{\textwidth}{|p{3.5cm}|p{3.5cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}X|}
+	\caption{Описание функций, используемых в модуле командного интерпретатора\label{cmd:table}}\\
+	\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название функции & \centrow \setlength{\baselineskip}{0.7\baselineskip} Аргументы & \centrow Описание функции \\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\endfirsthead
+	\caption*{Продолжение таблицы \ref{cmd:table}}\\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\finishhead
+	key-down-handler & scan & Обработчик нажатия клавиш с клавиатуры, где \texttt{scan} -- скан код нажатой клавиши. \\ \hline
+	process-command & com & Обработка введённой команды, где \texttt{com} -- список введённых символов. \\ \hline
+	print-start & Аргументов нет & Вывод на экран строки активности командного интерпретатора. \\ \hline
+	parse-commands & Аргументов нет & Парсер всех возможных команд командного интерпретатора. Выполняет соответствующую команду. \\ \hline
+	parse-command & com fun & Парсер определённый команды, где \texttt{com} -- строка названия команды, \texttt{fun} -- функция, которую выполняет команда. \\ \hline
+	parse-elem-str & str & Предикат проверки корректности названия введённой команды, где \texttt{str} -- строка названия команды.  \\ \hline
+	get-str & Аргументов нет & Получить строку названия команды. \\ \hline
+	is-com-separator & c & Предикат проверки символа c на принадлежность к разделителям. \\ \hline
+	cat-command-action & args & Выполнение команды вывода содержимого файла на экран с аргументами \texttt{args}(путь). \\ \hline
+	copy-command-action & args & Выполнение команды копирования файла с аргументами \texttt{args}(путь-откуда путь-куда). \\ \hline
+	append-command-action & args & Выполнение команды добавление текста в конец файла с аргументами \texttt{args}(путь текст). \\ \hline
+	chattr-command-action & args & Выполнение команды изменения атрибутов файла или каталога с аргументами \texttt{args}(путь атрибуты).
+\end{xltabular}
+\renewcommand{\arraystretch}{1.0} % восстановление сетки
+
+\subsection{Модуль "<vfs.lsp">}
+
+Функции модуля интерфейса виртуальной файловой системы представлены в таблице \ref{vfs:table}.
+
+\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
+\begin{xltabular}{\textwidth}{|p{3.5cm}|p{3.5cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}X|}
+	\caption{Описание функций, используемых в модуле интерфейса виртуальной файловой системы\label{vfs:table}}\\
+	\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название функции & \centrow \setlength{\baselineskip}{0.7\baselineskip} Аргументы & \centrow Описание функции \\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\endfirsthead
+	\caption*{Продолжение таблицы \ref{vfs:table}}\\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\finishhead
+	cur-dir & Аргументов нет & Получение пути текущего каталога. \\ \hline
+	list-dir & path & Получение содержимого каталога по пути \texttt{path}. \\ \hline
+	create-dir & path & Создание каталога по пути \texttt{path} где последний элемент пути это название нового каталога. \\ \hline
+	remove-dir & path & Удаление каталога по пути \texttt{path} если он пуст. \\ \hline
+	change-dir & path & Перемещение в каталог по пути \texttt{path}. \\ \hline
+	create-file & path & Создание файла по пути \texttt{path} где последний элемент пути это название нового файла.  \\ \hline
+	remove-file & path & Удаление файла по пути \texttt{path}. \\ \hline
+	open-file & path & Открытие файла как поток для чтения и записи по пути \texttt{path} и вернуть файловый объект. \\ \hline
+	is-directory & path & Проверка файла по пути \texttt{path} на каталог. \\ \hline
+	rename & path name & Переименовывание файла или каталога по пути \texttt{path} на name. \\ \hline
+	free-space & Аргументов нет & Получение объёма свободного места в разделе. \\ \hline
+	fstat & path & Получение метаданных файла или каталога. \\ \hline
+	set-attr & path\newline new-attributes & Изменение атрибутов файла или каталога по пути \texttt{path} на \texttt{new-attributes}. \\ \hline
+	find-entry & dir name & Поиск файла или каталога с названием name в каталоге \texttt{dir}. \\ \hline
+	parse-path & str-path & Преобразование строки пути \texttt{str-path} в список пути. \\ \hline
+	parse-up-dir & path-list & Преобразовать список пути \texttt{path-list} убрав все \textquotedbl..\textquotedbl. \\ \hline
+	load-path & path & Проверяет и при необходимости загружает путь \texttt{path}. Возвращает файловый объект файла или каталога или вызывает ошибку если пути нет. \\ \hline
+	get-parent-dir & path & Получение файлового объекта родительского каталога файла или каталога по строке пути \texttt{path}.
+\end{xltabular}
+\renewcommand{\arraystretch}{1.0} % восстановление сетки
+
+\subsection{Модуль "<mbr.lsp">}
+
+Функции модуля главной загрузочной записи представлены в таблице \ref{mbr:table}.
+
+\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
+\begin{xltabular}{\textwidth}{|p{3.5cm}|p{3.5cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}X|}
+	\caption{Описание функций, используемых в модуле главной загрузочной записи\label{mbr:table}}\\
+	\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название функции & \centrow \setlength{\baselineskip}{0.7\baselineskip} Аргументы & \centrow Описание функции \\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\endfirsthead
+	\caption*{Продолжение таблицы \ref{mbr:table}}\\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\finishhead
+	parse-partition-rec & Аргументов нет & Парсер записи таблицы раздеров в MBR. \\ \hline
+	load-partition & disk-num part-num & Загрузить файловую систему из раздела \texttt{part-num} с диска \texttt{disk-num}.
+\end{xltabular}
+\renewcommand{\arraystretch}{1.0} % восстановление сетки
+
+\subsection{Модули "<fat32-class.lsp">, "<fat32-fat.lsp">, "<fat32-entry.lsp">, "<fat32-fs.lsp">, "<fat32-file.lsp">}
+
+Функции модуля файловой системы FAT-32 представлены в таблице \ref{fat32:table}.
+
+\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
+\begin{xltabular}{\textwidth}{|p{3.5cm}|p{3.5cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}X|}
+	\caption{Описание функций, используемых в модуле файловой системы FAT-32\label{fat32:table}}\\
+	\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название функции & \centrow \setlength{\baselineskip}{0.7\baselineskip} Аргументы & \centrow Описание функции \\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\endfirsthead
+	\caption*{Продолжение таблицы \ref{fat32:table}}\\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\finishhead
+	parse-bios-parameter-block & Аргументов нет & Парсер блока параметров BIOS. \\ \hline
+	parse-fsinfo & Аргументов нет & Парсер структуры FSInfo. \\ \hline
+	update-fsinfo & free-count free-num & Обновить значения структуры fsinfo на диске на \texttt{free-count} и \texttt{free-num}. \\ \hline
+	fat-elem-pos & idx & Получить пару из смещение сектора + смещение в секторе для элемента с индексом \texttt{idx} таблицы FAT. \\ \hline
+	fat-read-sector & fat-table sector-num & Прочитать сектор \texttt{sector-num} таблицы FAT, записав содержимое сектора таблицы в массив \texttt{fat-table}. \\ \hline
+	fat-check-for-read & fat-table fat-read-sectors elem-num & Проверить прочитан ли сектор таблицы FAT, в котором находится элемент \texttt{elem-num} через массив прочитанных секторов \texttt{fat-read-sectors}. Если нет то прочитать сектор таблицы FAT в \texttt{fat-table}. \\ \hline
+	get-fat-chain & block-num & Получить цепочку блоков из таблицы FAT, начиная с блока \texttt{block-num}. \\ \hline
+	get-free-block & fat-table fat-read-sectors free-block-num & Найти первый свободный блок в таблице FAT \texttt{fat-table}, где массив прочитанных секторов таблицы FAT \texttt{fat-read-sectors}, начиная поиск с \texttt{free-block-num}. \\ \hline
+	update-fat-elem & idx val & Установить элемент с индексом \texttt{idx} в таблице FAT на диске на значение \texttt{val} при необходимости обновить во всех копиях таблицы FAT. \\ \hline
+	append-fat-chain & first-block new-idx & Добавить элемент \texttt{new-idx} в цепочку блоков с первым блоком \texttt{first-block}. \\ \hline
+	fat32-is-special-name & name & Проверка на специальное имя каталога. \\ \hline
+	fat32-get-date-time & date-bytes time-bytes creation-time-ms & Получить список даты и времени из массивов байт \texttt{date-bytes}, \texttt{time-bytes} и \texttt{creation-time-ms}. \\ \hline
+	fat32-generate-date-time & date-time & Получить массив байт для даты и времени для записи в каталоге из списка даты и времени \texttt{date-time}. \\ \hline
+	fat32-get-attributes & attribute-byte & Получить список атрибутов из записи в каталоге из байта \texttt{attribute-byte}. \\ \hline
+	fat32-generate-attribute-byte & attributes & Получить байт атрибутов для записи в каталоге из списка атрибутов \texttt{attributes}. \\ \hline
+	parse-lfn-entry & Аргументов нет & Парсер структуры записи длинного имени. \\ \hline
+	parse-fat32-dir-entry & Аргументов нет & Парсер структур записи в каталоге. \\ \hline
+	fat32-calc-lfn-count & name & Посчитать количество записей длинного имени для имени \texttt{name}. \\ \hline
+	fat32-generate-checksum & short-name & Посчитать контрольную сумму короткого имени для записи длинного имени. \\ \hline
+	fat32-create-lfn-entry & name-part-str lfn-num checksum & Создать одну запись длинного имени для строки \texttt{name-part-str}, с номером \texttt{lfn-num} и контрольной суммой \texttt{checksum}. \\ \hline
+	fat32-create-lfn-entries & entry & Создать записи длинного имени для записи в каталоге \texttt{entry}. \\ \hline
+	fat32-create-dir-entry & entry & Создать массив байт записи в каталоге \texttt{entry}. \\ \hline
+	fat32-create-lfn-dir-entries & entry & Создать массив байт записей длинного имени и записи в каталоге \texttt{entry}. \\ \hline
+	fat32-find-entry-pos & entry & Найти позицию(смещение в списке блоков . смещение в блоке) для записи в каталоге \texttt{entry} в каталоге \texttt{dir}. \\ \hline
+	fat32-get-free-entry-pos & dir-first-block entries-count & Найти позицию (смещение в списке блоков . смещение в блоке) в каталоге, где первый блок \texttt{dir-first-block}, где сможет поместиться количество записей \texttt{entries-count}. При необходимости выделяется новый блок. \\ \hline
+	fat32-mark-for-delete & entry & Пометить записей длинного имени и записи в каталоге \texttt{entry} на удаление. \\ \hline
+	fat32-add-entry & entry & Добавление записи \texttt{entry} на диск. \\ \hline
+	fat32-update-entry & entry changes & Обновить запись в каталоге \texttt{entry} выполнив изменения \texttt{changes}. Если количество записей длинного имени для новой записи отличается, то записи длинного имени и запись в каталоге будет пересоздана. \\ \hline
+	is-short-name-sym & symbol & Проверка на символ короткой строки. \\ \hline
+	get-trail-num & dir-entries short-name & Получить номер числового хвоста для короткого имени \texttt{short-name}. \\ \hline
+	fat32-generate-short-name & dir long-name & Сгенерировать короткое имя из длинного имени \texttt{long-name} в каталоге \texttt{dir}. \\ \hline
+	fat32-sort-attributes & attributes is-dir & Отсортировать список атрибутов \texttt{attribute} с проверкой атрибута DIRECTORY в зависимости от того является ли файл каталогом(\texttt{is-dir}). \\ \hline
+	fat32-create-special-entries & dir & Создать особые файлы указывающие на текущий каталог и на родительский каталог. \\ \hline
+	fat32-is-name-duplicate & dir name & Проверить есть ли в каталоге \texttt{dir} файл с названием \texttt{name}.
+\end{xltabular}
+\renewcommand{\arraystretch}{1.0} % восстановление сетки
+
+\subsubsection{Класс "<FAT32FileSystem">}
+
+"<FAT32FileSystem"> -- класс файловой системы FAT-32, методы которого являются функциями интерфейса виртуальной файловой системы.
+
+Методы класса "<FAT32FileSystem"> представлены в таблице \ref{FAT32FileSystem:table}
+
+\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
+\begin{xltabular}{\textwidth}{|p{3.25cm}|p{3.75cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}X|}
+	\caption{Описание методов класса "<FAT32FileSystem">\label{FAT32FileSystem:table}}\\
+	\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название метода & \centrow \setlength{\baselineskip}{0.7\baselineskip} Аргументы & \centrow Описание метода \\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\endfirsthead
+	\caption*{Продолжение таблицы \ref{FAT32FileSystem:table}}\\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\finishhead
+	fs-init & (fat32fs FAT32FileSystem) disk start-sector sector-count &  Загрузка файловой системы FAT32 с диска \texttt{disk}, начиная с сектора \texttt{start-sector}, с количеством секторов \texttt{sector-count}. Чтение блока параметров BIOS, структуры FSInfo, таблицы FAT. \\ \hline
+	load-dir & (fat32fs FAT32FileSystem) dir & Раскрыть и сохранить содержимое каталога \texttt{dir}. \\ \hline
+	fstat* & (fat32fs FAT32FileSystem) file-hash & Получение метаданных файлового объекта \texttt{file-hash}. \\ \hline
+	open-file* & (fat32fs FAT32FileSystem) file-hash & Открыть файл \texttt{file-hash} как поток для чтения и записи. Изменить время последнего доступа. \\ \hline
+	new-block & (fat32fs FAT32FileSystem) file-object & Выделить новый блок для файла \texttt{file-object}. \\ \hline
+	rename* & (fat32fs FAT32FileSystem) entry new-name & Переименовать файл или каталог \texttt{entry} на \texttt{new-name}. \\ \hline
+	remove-file* & (fat32fs FAT32FileSystem) dir entry & Пометить файл \texttt{entry} на удаление. \\ \hline
+	remove-dir* & (fat32fs FAT32FileSystem) parent-dir dir & Пометить каталог \texttt{entry} на удаление если он пустой. \\ \hline
+	free-space* & (fat32fs FAT32FileSystem) & Получить объём свободного места в текущем разделе в байтах. \\ \hline
+	create-file* & (fat32fs FAT32FileSystem) dir name & Создать файл с названием \texttt{name} в каталоге \texttt{dir}. \\ \hline
+	create-dir* & (fat32fs FAT32FileSystem) dir name & Создать каталог с названием \texttt{name} в каталоге \texttt{dir}. \\ \hline
+	set-attr* & (fat32fs FAT32FileSystem) entry new-attributes & Изменить атрибуты файла \texttt{entry} на \texttt{new-attributes}.
+\end{xltabular}
+\renewcommand{\arraystretch}{1.0} % восстановление сетки
+
+\subsubsection{Класс "<FAT32File">}
+
+"<FAT32File"> -- класс файла файловой системы FAT-32, методы которого являются функциями интерфейса виртуальной файловой системы.
+
+Методы класса "<FAT32File"> представлены в таблице \ref{FAT32File:table}
+
+\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
+\begin{xltabular}{\textwidth}{|p{3.25cm}|p{3.75cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}X|}
+	\caption{Описание методов класса "<FAT32File">\label{FAT32File:table}}\\
+	\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название метода & \centrow \setlength{\baselineskip}{0.7\baselineskip} Аргументы & \centrow Описание метода \\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\endfirsthead
+	\caption*{Продолжение таблицы \ref{FAT32File:table}}\\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\finishhead
+	close-file & (self FAT32File) & Закрытие файла. \\ \hline
+	tell-file & (self FAT32File) & Получение позиции в файле. \\ \hline
+	seek-file & (self FAT32File) offset origin & Сместить позицию в файле на \texttt{offset}, начиная с \texttt{origin}(SET(начало) CUR(текущее) END(конец)). \\ \hline
+	read-file & (self FAT32File) size & Прочить \texttt{size} байт из файла и сместить позицию на тоже число. Изменить время последнего доступа. \\ \hline
+	write-file & (self FAT32File) buf & Записать в файл массив байт \texttt{buf}, сместив позицию на соответствующее число. Изменить время последнего доступа, время последнего изменения. При необходимости выделить новый блок.
+\end{xltabular}
+\renewcommand{\arraystretch}{1.0} % восстановление сетки
+
+\subsection{Модули "<iso9660-fs.lsp">, "<iso9660-file.lsp">}
+
+Функции модуля файловой системы ISO-9660(CDFS) представлены в таблице \ref{iso:table}.
+
+\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
+\begin{xltabular}{\textwidth}{|p{3.5cm}|p{3.5cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}X|}
+	\caption{Описание функций, используемых в модуле файловой системы ISO-9660(CDFS)\label{iso:table}}\\
+	\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название функции & \centrow \setlength{\baselineskip}{0.7\baselineskip} Аргументы & \centrow Описание функции \\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\endfirsthead
+	\caption*{Продолжение таблицы \ref{iso:table}}\\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\finishhead
+	parse-boot-record & Аргументов нет & Парсер оставшейся части структуры дескриптора типа Boot Record. \\ \hline
+	parse-primary-desc & Аргументов нет & Парсер оставшейся части структуры дескриптора типа Primary Volume Descriptor. \\ \hline
+	parse-set-terminator-desc & Аргументов нет & Парсер оставшейся части структуры дескриптора типа Volume Descriptor Set Terminator. \\ \hline
+	parse-descriptor-data & Аргументов нет & Возврат парсера оставшейся части структуры дескриптора типа desc-type. \\ \hline
+	parse-date-time-entry & Аргументов нет & Парсер структуры даты и времени в записи в каталоге. \\ \hline
+	cdfs-get-date-time-entry & date-time-bytes & Получить список даты и времени из записи в каталоге из массива байт \texttt{date-time-bytes}. \\ \hline
+	cdfs-get-attributes-entry & attr-byte & Получить список аттрибутов из записи в каталоге из байта \texttt{attr-byte}. \\ \hline
+	parse-cdfs-dir-entry & Аргументов нет & Парсер структуры записи в каталоге. \\ \hline
+	parse-descriptor & Аргументов нет & Парсер структура основы дескриптора.
+\end{xltabular}
+\renewcommand{\arraystretch}{1.0} % восстановление сетки
+
+\subsubsection{Класс "<CDFSFileSystem">}
+
+"<CDFSFileSystem"> -- класс файловой системы ISO-9660(CDFS), методы которого являются функциями интерфейса виртуальной файловой системы.
+
+Методы класса "<CDFSFileSystem"> представлены в таблице \ref{CDFSFileSystem:table}
+
+\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
+\begin{xltabular}{\textwidth}{|p{3.25cm}|p{3.75cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}X|}
+	\caption{Описание методов класса "<CDFSFileSystem">\label{CDFSFileSystem:table}}\\
+	\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название метода & \centrow \setlength{\baselineskip}{0.7\baselineskip} Аргументы & \centrow Описание метода \\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\endfirsthead
+	\caption*{Продолжение таблицы \ref{CDFSFileSystem:table}}\\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\finishhead
+	fs-init & (self CDFSFileSystem) disk start-sector sector-count & Загрузка файловой системы ISO9660 с диска \texttt{disk}, начиная с сектора \texttt{start-sector}, с количеством секторов \texttt{sector-count}. Чтение основного дескриптора тома, записи в каталоге для корневого каталога из основного дескриптора тома. \\ \hline
+	load-dir & (self CDFSFileSystem) dir & Раскрыть и сохранить содержимое каталога \texttt{dir}. \\ \hline
+	fstat* & (self CDFSFileSystem) file-hash & Получение метаданных файлового объекта \texttt{file-hash}. \\ \hline
+	open-file* & (self CDFSFileSystem) file-hash & Открыть файл как поток для чтения. \\ \hline
+	new-block & (self CDFSFileSystem) file-object & Вызов ошибки при попытке выделения нового блока в файловой системе CDFS(ISO9660). \\ \hline
+	rename* & (self CDFSFileSystem) entry new-name & Вызов ошибки при попытке переименовании файла или каталога в файловой системе CDFS(ISO9660). \\ \hline
+	remove-file* & (self CDFSFileSystem) dir entry & Вызов ошибки при попытке переименовании файла в файловой системе CDFS(ISO9660). \\ \hline
+	remove-dir* & (self CDFSFileSystem) parent-dir dir & Вызов ошибки при попытке переименовании каталога в файловой системе CDFS(ISO9660). \\ \hline
+	free-space* & (self CDFSFileSystem) & Вызов ошибки при попытке получения свободного места в файловой системе CDFS(ISO9660). \\ \hline
+	create-file* & (self CDFSFileSystem) dir name & Вызов ошибки при попытке создании файла в файловой системе CDFS(ISO9660). \\ \hline
+	create-dir* & (self CDFSFileSystem) dir name & Вызов ошибки при попытке создании каталога в файловой системе CDFS(ISO9660). \\ \hline
+	set-attr* & (self CDFSFileSystem) entry new-attributes & Вызов ошибки при попытке изменения атрибутов файла или каталога в файловой системе CDFS(ISO9660).
+\end{xltabular}
+\renewcommand{\arraystretch}{1.0} % восстановление сетки
+
+\subsubsection{Класс "<CDFSFile">}
+
+"<CDFSFile"> -- класс файла файловой системы ISO-9660(CDFS), методы которого являются функциями интерфейса виртуальной файловой системы.
+
+Методы класса "<CDFSFile"> представлены в таблице \ref{CDFSFile:table}
+
+\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
+\begin{xltabular}{\textwidth}{|p{3.25cm}|p{3.75cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}X|}
+	\caption{Описание методов класса "<CDFSFile">\label{CDFSFile:table}}\\
+	\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название метода & \centrow \setlength{\baselineskip}{0.7\baselineskip} Аргументы & \centrow Описание метода \\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\endfirsthead
+	\caption*{Продолжение таблицы \ref{CDFSFile:table}}\\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\finishhead
+	close-file & (self CDFSFile) & Закрытие файла. \\ \hline
+	tell-file & (self CDFSFile) & Получение позиции в файле. \\ \hline
+	seek-file & (self CDFSFile) offset origin & Сместить позицию в файле на \texttt{offset}, начиная с \texttt{origin}(SET(начало) CUR(текущее) END(конец)). \\ \hline
+	read-file & (self CDFSFile) size & Прочитать \texttt{size} байт из файла и сместить позицию на тоже число. \\ \hline
+	write-file & (self CDFSFile) buf & Вызов ошибки при попытке записи в файл в файловой системе ISO-9660(CDFS).
+\end{xltabular}
+\renewcommand{\arraystretch}{1.0} % восстановление сетки
+
+\subsection{Модуль "<fs.lsp">}
+
+\subsubsection{Класс "<FileSystem">}
+
+"<FileSystem"> -- класс абстрактной файловой системы, методы которого являются функциями интерфейса виртуальной файловой системы. Реализации конкретных файловых систем наследуются от этого класса и реализуют его методы.
+
+Методы класса "<FileSystem"> представлены в таблице \ref{FileSystem:table}
+
+\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
+\begin{xltabular}{\textwidth}{|p{3.25cm}|p{3.75cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}X|}
+	\caption{Описание методов класса "<FileSystem">\label{FileSystem:table}}\\
+	\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название метода & \centrow \setlength{\baselineskip}{0.7\baselineskip} Аргументы & \centrow Описание метода \\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\endfirsthead
+	\caption*{Продолжение таблицы \ref{FileSystem:table}}\\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\finishhead
+	fs-init & (self FileSystem) disk start-sector sector-count & пустой метод, реализация которого находится в конкретной файловой системе. \\ \hline
+	load-dir & (self FileSystem) dir & пустой метод, реализация которого находится в конкретной файловой системе. \\ \hline
+	fstat* & (self FileSystem) file-hash & пустой метод, реализация которого находится в конкретной файловой системе. \\ \hline
+	open-file* & (self FileSystem) file-hash & пустой метод, реализация которого находится в конкретной файловой системе. \\ \hline
+	new-block & (self FileSystem) file-object & пустой метод, реализация которого находится в конкретной файловой системе. \\ \hline
+	rename* & (self FileSystem) entry new-name & пустой метод, реализация которого находится в конкретной файловой системе. \\ \hline
+	remove-file* & (self FileSystem) dir entry & пустой метод, реализация которого находится в конкретной файловой системе. \\ \hline
+	remove-dir* & (self FileSystem) parent-dir dir & пустой метод, реализация которого находится в конкретной файловой системе. \\ \hline
+	free-space* & (self FileSystem) & пустой метод, реализация которого находится в конкретной файловой системе. \\ \hline
+	create-file* & (self FileSystem) dir name & пустой метод, реализация которого находится в конкретной файловой системе. \\ \hline
+	create-dir* & (self FileSystem) dir name & пустой метод, реализация которого находится в конкретной файловой системе. \\ \hline
+	set-attr* & (self FileSystem) entry new-attributes & пустой метод, реализация которого находится в конкретной файловой системе.
+\end{xltabular}
+\renewcommand{\arraystretch}{1.0} % восстановление сетки
+
+\subsubsection{Класс "<File">}
+
+"<File"> -- класс абстрактного файла, методы которого являются функциями интерфейса виртуальной файловой системы. Реализации конкретных файлов наследуются от этого класса и в методах реализуют изменение метаданных файла с вызовом метода этого класса.
+
+Методы класса "<File"> представлены в таблице \ref{File:table}
+
+\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
+\begin{xltabular}{\textwidth}{|p{3.25cm}|p{3.75cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}X|}
+	\caption{Описание методов класса "<File">\label{File:table}}\\
+	\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название метода & \centrow \setlength{\baselineskip}{0.7\baselineskip} Аргументы & \centrow Описание метода \\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\endfirsthead
+	\caption*{Продолжение таблицы \ref{File:table}}\\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\finishhead
+	close-file & (self File) & Закрытие файла. \\ \hline
+	tell-file & (self File) & Получение позиции в файле. \\ \hline
+	seek-file & (self File) offset origin & Сместить позицию в файле на \texttt{offset}, начиная с \texttt{origin}(SET(начало) CUR(текущее) END(конец)). \\ \hline
+	read-file & (self File) size & Прочитать \texttt{size} байт из файла и сместить позицию на тоже число. \\ \hline
+	write-file & (self File) buf & Записать в файл массив байт \texttt{buf}, сместив позицию на соответствующее число.
+\end{xltabular}
+\renewcommand{\arraystretch}{1.0} % восстановление сетки
+
+\subsection{Модуль "<block.lsp">}
+
+Функции модуля работы с блоками диска представлены в таблице \ref{block:table}.
+
+\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
+\begin{xltabular}{\textwidth}{|p{3.5cm}|p{3.5cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}X|}
+	\caption{Описание функций, используемых в модуле работы с блоками\label{block:table}}\\
+	\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название функции & \centrow \setlength{\baselineskip}{0.7\baselineskip} Аргументы & \centrow Описание функции \\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\endfirsthead
+	\caption*{Продолжение таблицы \ref{block:table}}\\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\finishhead
+	set-block-disk & disk & Установить диск \texttt{disk}, с которого читать блоки. \\ \hline
+	set-block-size & size & Установить размер блока диска \texttt{size} в секторах. \\ \hline
+	set-block-offset & offset & Установить смещение в секторах для отсчета блоков диска. \\ \hline
+	set-blocks-start-num & start-num & Установить значение минимального номера первого блока. \\ \hline
+	block-read & num & Прочитать блок с номером \texttt{num}. \\ \hline
+	block-write & num buf & Записать буфер buf в блок с номером \texttt{num}. \\ \hline
+	get-blocks-pos & blocks offset & Получить индекс блока и смещение по смещению \texttt{offset} в списке блоков \texttt{blocks}. \\ \hline
+	get-offset-from-pos & pos & Получить смещение в байтах из позиции(индекс блока . смещение в блоке).
+\end{xltabular}
+\renewcommand{\arraystretch}{1.0} % восстановление сетки
+
+\subsection{Модуль "<ata.lsp">}
+
+Функции модуля драйвера ATA представлены в таблице \ref{ata:table}.
+
+\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
+\begin{xltabular}{\textwidth}{|p{3.5cm}|p{3.5cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}X|}
+	\caption{Описание функций, используемых в модуле главной загрузочной записи\label{ata:table}}\\
+	\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название функции & \centrow \setlength{\baselineskip}{0.7\baselineskip} Аргументы & \centrow Описание функции \\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\endfirsthead
+	\caption*{Продолжение таблицы \ref{ata:table}}\\
+	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
+	\finishhead
+	ata-get-status-reg & bit & Получение значения бита \texttt{bit} регистра статуса. \\ \hline
+	mk/ata-wait-status & name bit val & Генерация функций ожидания бита регистра статуса. \texttt{name} - имя, \texttt{bit} - номер бита статуса, \texttt{val} - значение для окончания ожидания. \\ \hline
+	ata-set-dev & dev & Установка номера устройства. \\ \hline
+	ata-set-lba & sec num & Установить номер сектора в режиме LBA. \\ \hline
+	ata-check-error & Аргументов нет & Проверка ошибки. \\ \hline
+	ata-set-command & cmd & Установить команду контроллера. \\ \hline
+	ata-read & size & Чтение данных контроллера, \texttt{size} байт. \\ \hline
+	ata-write & arr & Запись массива \texttt{arr} в контроллер. \\ \hline
+	ata-identify & Аргументов нет & Чтение служебной информации: число головок, цилиндров, секторов, серийный номер, ... \\ \hline
+	ata-read-sectors & dev start num & Читает сектора жесткого диска. \texttt{dev} - устройство: 0 primary master, 1 - slave. \texttt{start} - начальный сектор, \texttt{num} - число секторов. Возвращает массив данных. \\ \hline
+	ata-write-sectors & dev start num arr & Пишет сектора жесткого диска. \texttt{dev} - устройство: 0 primary master, 1 - slave. \texttt{start} - начальный сектор, \texttt{num} - число секторов, \texttt{arr} - массив байт данных.
+\end{xltabular}
+\renewcommand{\arraystretch}{1.0} % восстановление сетки
+
+\subsection{Модульное и интеграционное тестирование разработанной виртуальной файловой системы}
+
+Результаты интеграционного тестирования модуля "<vfs.lsp"> представлены на рисунках \ref{unitIVFS:image} и \ref{unitIVFSdisk:image}
+
+\begin{figure}[H]
+	\begin{lstlisting}[language={}]
+		"join test"
+		"parse path test"
+		"load path test"
+		"get parent dir test"
+		"list dir test"
+		"create dir test"
+		"remove dir test"
+		"change dir test"
+		"create file test"
+		"remove file test"
+		"open file test"
+		"is directory test"
+		"rename test"
+		"free space test"
+		"fstat test"
+		"work with file test"
+		"set attributes test"
+		"Успешно завершено тестов: " 26 / 26
+		"Все тесты завершены успешно"
+	\end{lstlisting}  
+	\caption{Результат интеграционного тестирования функций модуля "<vfs.lsp">}
+	\label{unitIVFS:image}
+\end{figure}
+
+\begin{figure}[H]
+	\begin{lstlisting}[language={}]
+		"MBR INIT"
+		"FAT32 PARTITION INIT"
+		"CDFS PARTITION INIT"
+		"FAT32 load partition"
+		"Create first file named 'first-file.txt'"
+		"write to file"
+		"read the content of file:" "wrote then read the content of first file"
+		"Create dir named 'firstdir'"
+		"change-dir to new dir"
+		"create second file named 'second file.bin'"
+		"write to file"
+		"read the content of file:" "wrote then read the content of second created file"
+		"CDFS load partition"
+		"open first file"
+		"content of first file"
+		"change-dir to second dir"
+		"open second file"
+		"first part of second file on first block"
+		"second part of second file on second block"
+	\end{lstlisting}  
+	\caption{Результат интеграционного тестирования модуля "<vfs.lsp">}
+	\label{unitIVFSdisk:image}
+\end{figure}
+
+Результат интеграционного тестирования модуля "<mbr.lsp"> представлен на рисунке \ref{unitMBR:image}
+
+\begin{figure}[H]
+	\begin{lstlisting}[language={}]
+		"parse partition rec test"
+		"load partition test"
+		"Успешно завершено тестов: " 2 / 2
+		"Все тесты завершены успешно"
+	\end{lstlisting}  
+	\caption{Результат интеграционного тестирования функций модуля "<mbr.lsp">}
+	\label{unitMBR:image}
+\end{figure}
+
+Результаты интеграционного тестирования модулей "<fat32-class.lsp">, "<fat32-fat.lsp">, "<fat32-entry.lsp">, "<fat32-fs.lsp">, "<fat32-file.lsp"> представлены на рисунках \ref{unitFAT:image}, \ref{unitFAT2:image} и \ref{unitFATdisk:image}
+
+\begin{figure}[H]
+	\begin{lstlisting}[language={}]
+		"parse bios parameter block test"
+		"parse fsinfo test"
+		"get creation date-time test"
+		"get modify date-time test"
+		"get access date-time test"
+		"get attributes test 1"
+		"get attributes test 2"
+		"fat elem pos test"
+		"get fat chain test"
+		"parse lfn test 1"
+		"parse lfn test 2"
+		"parse dir entry test"
+		"fs-init test"
+		"load dir test 1"
+		"load dir test 2"
+		"fstat test"
+		"generate creation date-time bytes test"
+		"generate modify date-time bytes test"
+		"generate access date-time bytes test"
+		"generate attribute byte test 1"
+		"generate attribute byte test 2"
+		"calculate lfn count test 1"
+		"calculate lfn count test 2"
+		"calculate lfn count test 3"
+		"generate checksum test"
+		"generate checksum test"
+		"create lfn entry test 1"
+		"create lfn entry test 2"
+		"create lfn entries test"
+		"create dir entry test"
+		"create both lfn and dir entry test"
+		"find entry pos test"
+		"update entry test"
+		"get free entry pos test"
+		"mark entries for delete test"
+		"get free block test"
+		"update fat elem test1"
+		"update fat elem test2"
+		"append fat chain test"
+		"update entry test1"
+		"update entry test2"
+		"new block test"
+		"generate short name test 1"
+		"generate short name test 2"
+		"fat32 add entry"
+		"rename test"
+		"remove file test"
+		"remove dir test"
+		"free space test"
+	\end{lstlisting}  
+	\caption{Результат интеграционного тестирования функций модулей "<fat32-class.lsp">, "<fat32-fat.lsp">, "<fat32-entry.lsp">, "<fat32-fs.lsp">, "<fat32-file.lsp">}
+	\label{unitFAT:image}
+\end{figure}
+
+\begin{figure}[H]
+	\begin{lstlisting}[language={}]
+		"create file test"
+		"create dir test"
+		"open file test"
+		"read file test"
+		"write file test"
+		"sort attributes test"
+		"set attributes test"
+		"Успешно завершено тестов: " 56 / 56
+		"Все тесты завершены успешно"
+	\end{lstlisting}  
+	\caption{Продолжение результатов интеграционного тестирования функций модулей "<fat32-class.lsp">, "<fat32-fat.lsp">, "<fat32-entry.lsp">, "<fat32-fs.lsp">, "<fat32-file.lsp">}
+	\label{unitFAT2:image}
+\end{figure}
+
+\begin{figure}[H]
+	\begin{lstlisting}[language={}]
+		"DISK INIT START"
+		"DISK INIT END"
+		"FS-INIT START"
+		"FS-INIT END"
+		"EMPTY ROOT DIR LOAD"
+		"CREATE FIRST FILE AND FIRST DIR"
+		"OPEN FIRST FILE"
+		"FIRST FILE WRITE"
+		"FIRST FILE READ"
+		"first file content"
+		"EMPTY FIRST DIR LOAD"
+		"CREATE SECOND FILE IN FIRST DIR"
+		"OPEN SECOND FILE"
+		"SECOND FILE WRITE"
+		"SECOND FILE READ"
+		"second file content"
+		"CREATE SECOND DIR"
+		"EMPTY SECOND DIR LOAD"
+		"CREATE THIRD FILE IN SECOND DIR"
+		"OPEN THIRD FILE"
+		"THIRD FILE WRITE"
+		"THIRD FILE READ"
+		"third file content"
+	\end{lstlisting}  
+	\caption{Результат интеграционного тестирования модулей "<fat32-class.lsp">, "<fat32-fat.lsp">, "<fat32-entry.lsp">, "<fat32-fs.lsp">, "<fat32-file.lsp">}
+	\label{unitFATdisk:image}
+\end{figure}
+
+Результаты интеграционного тестирования модулей "<iso9660-fs.lsp">, "<iso9660-file.lsp"> представлены на рисунках \ref{unitISO:image} и \ref{unitISOdisk:image}
+
+\begin{figure}[H]
+	\begin{lstlisting}[language={}]
+		"get date time from entry test"
+		"get attributes from entry test 1"
+		"get attributes from entry test 2"
+		"get attributes from entry test 3"
+		"parse root dir entry test"
+		"parse dir entry test 1"
+		"parse dir entry test 2"
+		"parse dir entry test 3"
+		"parse boot record descriptor test"
+		"parse descriptor set terminator test"
+		"parse primary volume descriptor test"
+		"fs init test"
+		"load dir test"
+		"fstat test"
+		"open file test"
+		"read file test"
+		"Успешно завершено тестов: " 16 / 16
+		"Все тесты завершены успешно"
+	\end{lstlisting}  
+	\caption{Результат интеграционного тестирования функций модулей "<iso9660-fs.lsp">, "<iso9660-file.lsp">}
+	\label{unitISO:image}
+\end{figure}
+
+\begin{figure}[H]
+	\begin{lstlisting}[language={}]
+		DISK-MAKE-START
+		DISK-MAKE-END
+		FS-INIT-START
+		FS-INIT-END
+		LOAD-ROOT-DIR-START
+		LOAD-ROOT-DIR-END
+		"content of first file"
+		LOAD-DIR-START
+		LOAD-DIR-END
+		"first part of second file on first block"
+		"second part of second file on second block"
+	\end{lstlisting}  
+	\caption{Результат интеграционного тестирования модулей "<iso9660-fs.lsp">, "<iso9660-file.lsp">}
+	\label{unitISOdisk:image}
+\end{figure}
+
+Результат интеграционного тестирования модуля "<fs.lsp"> представлен на рисунке \ref{unitVFS:image}
+
+\begin{figure}[H]
+	\begin{lstlisting}[language={}]
+		"close file test"
+		"tell file test"
+		"seek file test1"
+		"seek file test2"
+		"seek file test2.2"
+		"seek file test3"
+		"read file test1"
+		"read file test2"
+		"read file test3"
+		"write file test1"
+		"write file test2"
+		"write file test3"
+		"write file test4"
+		"Успешно завершено тестов: " 13 / 13
+		"Все тесты завершены успешно"
+	\end{lstlisting}  
+	\caption{Результат интеграционного тестирования функций модуля "<fs.lsp">}
+	\label{unitVFS:image}
+\end{figure}
+
+Результат интеграционного тестирования модуля "<block.lsp"> представлен на рисунке \ref{unitBlock:image}
+
+\begin{figure}[H]
+	\begin{lstlisting}[language={}]
+		"block set size test"
+		"block set offset test"
+		"block read test1"
+		"block read test2"
+		"block write test1"
+		"block write test2"
+		"get block pos test"
+		"get offset from pos test"
+		"Успешно завершено тестов: " 8 / 8
+		"Все тесты завершены успешно"
+	\end{lstlisting}  
+	\caption{Результат интеграционного тестирования функций модуля "<block.lsp">}
+	\label{unitBlock:image}
+\end{figure}
+
+Результат модульного тестирования модуля "<ata.lsp"> представлен на рисунке \ref{unitATA:image}
+
+\begin{figure}[H]
+	\begin{lstlisting}[language={}]
+		"ata test"
+		"Успешно завершено тестов: " 1 / 1
+		"Все тесты завершены успешно"
+	\end{lstlisting}  
+	\caption{Результат интеграционного тестирования функций модуля "<ata.lsp">}
+	\label{unitATA:image}
+\end{figure}
+
+\subsection{Системное тестирование разработанной виртуальной файловой системы}
+
+Результат системного тестирования разработанной виртуальной файловой системы представлен на рисунке \ref{systemTest:image}
+
+\begin{figure}[H]
+	\begin{lstlisting}[language={}]
+		> ls
+		("boot" "fib.lsp")
+		> cd boot
+		> cwd
+		"/boot"
+		> touch test.lsp
+		> append test.lsp test-input
+		> cat test.lsp
+		"test-input"
+		> mkdir test-dir
+		> copy test.lsp test-dir/test2.lsp
+		> cat test-dir/test2.lsp
+		"test-input"
+		> rm test-dir/test2.lsp
+		> rmdir test-dir
+		> 
+	\end{lstlisting}  
+	\caption{Результат системного тестирования разработанной виртуальной файловой системы}
+	\label{systemTest:image}
+\end{figure}
+
+\begin{comment}
+\subsection{Классы, используемые при разработке сайта}
+
+Можно выделить следующий список классов и их методов, использованных при разработке web-приложения (таблица \ref{class:table}). Пример таблицы с уменьшенным межстрочным интервалом.
+
+\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
+\begin{xltabular}{\textwidth}{|X|p{2.5cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}p{4.85cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}p{4.85cm}|}
+\caption{Описание классов Bitrix, используемых в приложении\label{class:table}}\\
+\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название класса & \centrow \setlength{\baselineskip}{0.7\baselineskip} Модуль, к которому относится класс & \centrow Описание класса & \centrow Методы \\
+\hline \centrow 1 & \centrow 2 & \centrow 3 & \centrow 4\\ \hline
+\endfirsthead
+\caption*{Продолжение таблицы \ref{class:table}}\\
+\hline \centrow 1 & \centrow 2 & \centrow 3 & \centrow 4\\ \hline
+\finishhead
+CMain & Главный модуль & CMain – главный класс страницы web-приложения. После одного из этапов по загрузке страницы в сценарии становится доступным инициализированный системой объект данного класса с именем \$APPLICATION & void ShowTitle(string property\_code = «title», bool strip\_tags = true)
+Выводит заголовок страницы
+void SetTitle(string title)
+Устанавливает заголовок страницы
+
+void ShowCSS(bool external = true, bool XhtmlStyle = true)
+Выводит таблицу стилей CSS страницы\\
+\hline CFile & Главный модуль & CFile – Класс для работы с файлами и изображениями & array GetFileArray (int file\_id)
+Метод возвращает массив, содержащий описание файла (путь к файлу, имя файла, размер) с идентификатором file\_id
+\end{xltabular}
+\renewcommand{\arraystretch}{1.0} % восстановление сетки
+
+\subsection{Модульное тестирование разработанного web-сайта}
+
+Модульный тест для класса User из модели данных представлен на рисунке \ref{unitUser:image}.
+
+\begin{figure}[ht]
+\begin{lstlisting}[language=Python]
+from django.test import TestCase
+from .models import *
+User = get_user_model()
+
+
+class ShpoTestCases(TestCase):
+
+    def setUp(self) -> None:
+        self.user = User.objects.create(username='testtestovich', password='testtestovich', first_name='Sad', last_name='')
+
+    def test_2(self):
+
+        self.assertEqual(self.user.first_name, 'Sad')
+        self.assertEqual(self.user.last_name, 'Cat')
+        print((self.user))
+        print((self.user.first_name))
+        print((self.user.last_name))
+\end{lstlisting}  
+\caption{Модульный тест класса User}
+\label{unitUser:image}
+\end{figure}
+
+\subsection{Системное тестирование разработанного web-сайта}
+
+На рисунке \ref{main:image} представлена главная страница сайта «Русатом – Аддитивные технологии».
+\newpage % при необходимости можно переносить рисунок на новую страницу
+\begin{figure}[H] % H - рисунок обязательно здесь, или переносится, оставляя пустоту
+\center{\includegraphics[width=1\linewidth]{main1}}
+\center{\includegraphics[width=1\linewidth]{main2}}
+\center{\includegraphics[width=1\linewidth]{main3}}
+\caption{Главная страница сайта «Русатом – Аддитивные технологии»}
+\label{main:image}
+\end{figure}
+
+На рисунке \ref{menu:image} представлен динамический вывод заголовков, включающий в себя искомые фразы при поиске фраз.
+
+\begin{figure}[ht]
+\center{\includegraphics[width=1\linewidth]{menu}}
+\caption{Динамический вывод заголовков}
+\label{menu:image}
+\end{figure}
+
+На рисунке \ref{enter:image} представлен ввод данных для публикации новости.
+
+\begin{figure}[ht]
+\center{\includegraphics[width=1\linewidth]{enter}}
+\caption{Ввод данных для публикации очень-очень длинной, интересной и полезной новости}
+\label{enter:image}
+\end{figure}
+\end{comment}
