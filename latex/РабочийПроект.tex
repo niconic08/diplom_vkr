@@ -1,7 +1,7 @@
 \section{Рабочий проект}
 
 Можно выделить несколько модулей, использованных при разработке
-виртуальной файловой системы: командный интепретатор, интерфейс виртуальной файловой системы, главная загрузочная запись, файловая система FAT-32, файловая система ISO-9660(CDFS), виртуальная файловая система, работа с блоками диска, драйвер ATA.
+виртуальной файловой системы: командный интепретатор, интерфейс виртуальной файловой системы, главная загрузочная запись, файловая система FAT-32, файловая система ISO-9660 (CDFS), виртуальная файловая система, работа с блоками диска, драйвер ATA.
 
 \subsection{Модуль "<shell.lsp">}
 
@@ -119,7 +119,7 @@
 	fat32-create-lfn-entries & entry & Создать записи длинного имени для записи в каталоге \texttt{entry}. \\ \hline
 	fat32-create-dir-entry & entry & Создать массив байт записи в каталоге \texttt{entry}. \\ \hline
 	fat32-create-lfn-dir-entries & entry & Создать массив байт записей длинного имени и записи в каталоге \texttt{entry}. \\ \hline
-	fat32-find-entry-pos & entry & Найти позицию(смещение в списке блоков . смещение в блоке) для записи в каталоге \texttt{entry} в каталоге \texttt{dir}. \\ \hline
+	fat32-find-entry-pos & entry & Найти позицию (смещение в списке блоков . смещение в блоке) для записи в каталоге \texttt{entry} в каталоге \texttt{dir}. \\ \hline
 	fat32-get-free-entry-pos & dir-first-block entries-count & Найти позицию (смещение в списке блоков . смещение в блоке) в каталоге, где первый блок \texttt{dir-first-block}, где сможет поместиться количество записей \texttt{entries-count}. При необходимости выделяется новый блок. \\ \hline
 	fat32-mark-for-delete & entry & Пометить записей длинного имени и записи в каталоге \texttt{entry} на удаление. \\ \hline
 	fat32-add-entry & entry & Добавление записи \texttt{entry} на диск. \\ \hline
@@ -127,7 +127,7 @@
 	is-short-name-sym & symbol & Проверка на символ короткой строки. \\ \hline
 	get-trail-num & dir-entries short-name & Получить номер числового хвоста для короткого имени \texttt{short-name}. \\ \hline
 	fat32-generate-short-name & dir long-name & Сгенерировать короткое имя из длинного имени \texttt{long-name} в каталоге \texttt{dir}. \\ \hline
-	fat32-sort-attributes & attributes is-dir & Отсортировать список атрибутов \texttt{attribute} с проверкой атрибута DIRECTORY в зависимости от того является ли файл каталогом(\texttt{is-dir}). \\ \hline
+	fat32-sort-attributes & attributes is-dir & Отсортировать список атрибутов \texttt{attribute} с проверкой атрибута DIRECTORY в зависимости от того является ли файл каталогом (\texttt{is-dir}). \\ \hline
 	fat32-create-special-entries & dir & Создать особые файлы указывающие на текущий каталог и на родительский каталог. \\ \hline
 	fat32-is-name-duplicate & dir name & Проверить есть ли в каталоге \texttt{dir} файл с названием \texttt{name}.
 \end{xltabular}
@@ -180,7 +180,7 @@
 	\finishhead
 	close-file & (self FAT32File) & Закрытие файла. \\ \hline
 	tell-file & (self FAT32File) & Получение позиции в файле. \\ \hline
-	seek-file & (self FAT32File) offset origin & Сместить позицию в файле на \texttt{offset}, начиная с \texttt{origin}(SET(начало) CUR(текущее) END(конец)). \\ \hline
+	seek-file & (self FAT32File) offset origin & Сместить позицию в файле на \texttt{offset}, начиная с \texttt{origin}(SET (начало) CUR (текущее) END (конец)). \\ \hline
 	read-file & (self FAT32File) size & Прочить \texttt{size} байт из файла и сместить позицию на тоже число. Изменить время последнего доступа. \\ \hline
 	write-file & (self FAT32File) buf & Записать в файл массив байт \texttt{buf}, сместив позицию на соответствующее число. Изменить время последнего доступа, время последнего изменения. При необходимости выделить новый блок.
 \end{xltabular}
@@ -188,11 +188,11 @@
 
 \subsection{Модули "<iso9660-fs.lsp">, "<iso9660-file.lsp">}
 
-Функции модуля файловой системы ISO-9660(CDFS) представлены в таблице \ref{iso:table}.
+Функции модуля файловой системы ISO-9660 (CDFS) представлены в таблице \ref{iso:table}.
 
 \renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
 \begin{xltabular}{\textwidth}{|p{3.5cm}|p{3.5cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}X|}
-	\caption{Описание функций, используемых в модуле файловой системы ISO-9660(CDFS)\label{iso:table}}\\
+	\caption{Описание функций, используемых в модуле файловой системы ISO-9660 (CDFS)\label{iso:table}}\\
 	\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название функции & \centrow \setlength{\baselineskip}{0.7\baselineskip} Аргументы & \centrow Описание функции \\
 	\hline \centrow 1 & \centrow 2 & \centrow 3\\ \hline
 	\endfirsthead
@@ -213,7 +213,7 @@
 
 \subsubsection{Класс "<CDFSFileSystem">}
 
-"<CDFSFileSystem"> -- класс файловой системы ISO-9660(CDFS), методы которого являются функциями интерфейса виртуальной файловой системы.
+"<CDFSFileSystem"> -- класс файловой системы ISO-9660 (CDFS), методы которого являются функциями интерфейса виртуальной файловой системы.
 
 Методы класса "<CDFSFileSystem"> представлены в таблице \ref{CDFSFileSystem:table}
 
@@ -230,20 +230,20 @@
 	load-dir & (self CDFSFileSystem) dir & Раскрыть и сохранить содержимое каталога \texttt{dir}. \\ \hline
 	fstat* & (self CDFSFileSystem) file-hash & Получение метаданных файлового объекта \texttt{file-hash}. \\ \hline
 	open-file* & (self CDFSFileSystem) file-hash & Открыть файл как поток для чтения. \\ \hline
-	new-block & (self CDFSFileSystem) file-object & Вызов ошибки при попытке выделения нового блока в файловой системе CDFS(ISO9660). \\ \hline
-	rename* & (self CDFSFileSystem) entry new-name & Вызов ошибки при попытке переименовании файла или каталога в файловой системе CDFS(ISO9660). \\ \hline
-	remove-file* & (self CDFSFileSystem) dir entry & Вызов ошибки при попытке переименовании файла в файловой системе CDFS(ISO9660). \\ \hline
-	remove-dir* & (self CDFSFileSystem) parent-dir dir & Вызов ошибки при попытке переименовании каталога в файловой системе CDFS(ISO9660). \\ \hline
-	free-space* & (self CDFSFileSystem) & Вызов ошибки при попытке получения свободного места в файловой системе CDFS(ISO9660). \\ \hline
-	create-file* & (self CDFSFileSystem) dir name & Вызов ошибки при попытке создании файла в файловой системе CDFS(ISO9660). \\ \hline
-	create-dir* & (self CDFSFileSystem) dir name & Вызов ошибки при попытке создании каталога в файловой системе CDFS(ISO9660). \\ \hline
-	set-attr* & (self CDFSFileSystem) entry new-attributes & Вызов ошибки при попытке изменения атрибутов файла или каталога в файловой системе CDFS(ISO9660).
+	new-block & (self CDFSFileSystem) file-object & Вызов ошибки при попытке выделения нового блока в файловой системе CDFS (ISO9660). \\ \hline
+	rename* & (self CDFSFileSystem) entry new-name & Вызов ошибки при попытке переименовании файла или каталога в файловой системе CDFS (ISO9660). \\ \hline
+	remove-file* & (self CDFSFileSystem) dir entry & Вызов ошибки при попытке переименовании файла в файловой системе CDFS (ISO9660). \\ \hline
+	remove-dir* & (self CDFSFileSystem) parent-dir dir & Вызов ошибки при попытке переименовании каталога в файловой системе CDFS (ISO9660). \\ \hline
+	free-space* & (self CDFSFileSystem) & Вызов ошибки при попытке получения свободного места в файловой системе CDFS (ISO9660). \\ \hline
+	create-file* & (self CDFSFileSystem) dir name & Вызов ошибки при попытке создании файла в файловой системе CDFS (ISO9660). \\ \hline
+	create-dir* & (self CDFSFileSystem) dir name & Вызов ошибки при попытке создании каталога в файловой системе CDFS (ISO9660). \\ \hline
+	set-attr* & (self CDFSFileSystem) entry new-attributes & Вызов ошибки при попытке изменения атрибутов файла или каталога в файловой системе CDFS (ISO9660).
 \end{xltabular}
 \renewcommand{\arraystretch}{1.0} % восстановление сетки
 
 \subsubsection{Класс "<CDFSFile">}
 
-"<CDFSFile"> -- класс файла файловой системы ISO-9660(CDFS), методы которого являются функциями интерфейса виртуальной файловой системы.
+"<CDFSFile"> -- класс файла файловой системы ISO-9660 (CDFS), методы которого являются функциями интерфейса виртуальной файловой системы.
 
 Методы класса "<CDFSFile"> представлены в таблице \ref{CDFSFile:table}
 
@@ -258,9 +258,9 @@
 	\finishhead
 	close-file & (self CDFSFile) & Закрытие файла. \\ \hline
 	tell-file & (self CDFSFile) & Получение позиции в файле. \\ \hline
-	seek-file & (self CDFSFile) offset origin & Сместить позицию в файле на \texttt{offset}, начиная с \texttt{origin}(SET(начало) CUR(текущее) END(конец)). \\ \hline
+	seek-file & (self CDFSFile) offset origin & Сместить позицию в файле на \texttt{offset}, начиная с \texttt{origin}(SET (начало) CUR (текущее) END (конец)). \\ \hline
 	read-file & (self CDFSFile) size & Прочитать \texttt{size} байт из файла и сместить позицию на тоже число. \\ \hline
-	write-file & (self CDFSFile) buf & Вызов ошибки при попытке записи в файл в файловой системе ISO-9660(CDFS).
+	write-file & (self CDFSFile) buf & Вызов ошибки при попытке записи в файл в файловой системе ISO-9660 (CDFS).
 \end{xltabular}
 \renewcommand{\arraystretch}{1.0} % восстановление сетки
 
@@ -313,7 +313,7 @@
 	\finishhead
 	close-file & (self File) & Закрытие файла. \\ \hline
 	tell-file & (self File) & Получение позиции в файле. \\ \hline
-	seek-file & (self File) offset origin & Сместить позицию в файле на \texttt{offset}, начиная с \texttt{origin}(SET(начало) CUR(текущее) END(конец)). \\ \hline
+	seek-file & (self File) offset origin & Сместить позицию в файле на \texttt{offset}, начиная с \texttt{origin}(SET (начало) CUR (текущее) END (конец)). \\ \hline
 	read-file & (self File) size & Прочитать \texttt{size} байт из файла и сместить позицию на тоже число. \\ \hline
 	write-file & (self File) buf & Записать в файл массив байт \texttt{buf}, сместив позицию на соответствующее число.
 \end{xltabular}
@@ -339,7 +339,7 @@
 	block-read & num & Прочитать блок с номером \texttt{num}. \\ \hline
 	block-write & num buf & Записать буфер buf в блок с номером \texttt{num}. \\ \hline
 	get-blocks-pos & blocks offset & Получить индекс блока и смещение по смещению \texttt{offset} в списке блоков \texttt{blocks}. \\ \hline
-	get-offset-from-pos & pos & Получить смещение в байтах из позиции(индекс блока . смещение в блоке).
+	get-offset-from-pos & pos & Получить смещение в байтах из позиции (индекс блока . смещение в блоке).
 \end{xltabular}
 \renewcommand{\arraystretch}{1.0} % восстановление сетки
 
@@ -669,86 +669,3 @@
 	\caption{Результат системного тестирования разработанной виртуальной файловой системы}
 	\label{systemTest:image}
 \end{figure}
-
-\begin{comment}
-\subsection{Классы, используемые при разработке сайта}
-
-Можно выделить следующий список классов и их методов, использованных при разработке web-приложения (таблица \ref{class:table}). Пример таблицы с уменьшенным межстрочным интервалом.
-
-\renewcommand{\arraystretch}{0.8} % уменьшение расстояний до сетки таблицы
-\begin{xltabular}{\textwidth}{|X|p{2.5cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}p{4.85cm}|>{\setlength{\baselineskip}{0.7\baselineskip}}p{4.85cm}|}
-\caption{Описание классов Bitrix, используемых в приложении\label{class:table}}\\
-\hline \centrow \setlength{\baselineskip}{0.7\baselineskip} Название класса & \centrow \setlength{\baselineskip}{0.7\baselineskip} Модуль, к которому относится класс & \centrow Описание класса & \centrow Методы \\
-\hline \centrow 1 & \centrow 2 & \centrow 3 & \centrow 4\\ \hline
-\endfirsthead
-\caption*{Продолжение таблицы \ref{class:table}}\\
-\hline \centrow 1 & \centrow 2 & \centrow 3 & \centrow 4\\ \hline
-\finishhead
-CMain & Главный модуль & CMain – главный класс страницы web-приложения. После одного из этапов по загрузке страницы в сценарии становится доступным инициализированный системой объект данного класса с именем \$APPLICATION & void ShowTitle(string property\_code = «title», bool strip\_tags = true)
-Выводит заголовок страницы
-void SetTitle(string title)
-Устанавливает заголовок страницы
-
-void ShowCSS(bool external = true, bool XhtmlStyle = true)
-Выводит таблицу стилей CSS страницы\\
-\hline CFile & Главный модуль & CFile – Класс для работы с файлами и изображениями & array GetFileArray (int file\_id)
-Метод возвращает массив, содержащий описание файла (путь к файлу, имя файла, размер) с идентификатором file\_id
-\end{xltabular}
-\renewcommand{\arraystretch}{1.0} % восстановление сетки
-
-\subsection{Модульное тестирование разработанного web-сайта}
-
-Модульный тест для класса User из модели данных представлен на рисунке \ref{unitUser:image}.
-
-\begin{figure}[ht]
-\begin{lstlisting}[language=Python]
-from django.test import TestCase
-from .models import *
-User = get_user_model()
-
-
-class ShpoTestCases(TestCase):
-
-    def setUp(self) -> None:
-        self.user = User.objects.create(username='testtestovich', password='testtestovich', first_name='Sad', last_name='')
-
-    def test_2(self):
-
-        self.assertEqual(self.user.first_name, 'Sad')
-        self.assertEqual(self.user.last_name, 'Cat')
-        print((self.user))
-        print((self.user.first_name))
-        print((self.user.last_name))
-\end{lstlisting}  
-\caption{Модульный тест класса User}
-\label{unitUser:image}
-\end{figure}
-
-\subsection{Системное тестирование разработанного web-сайта}
-
-На рисунке \ref{main:image} представлена главная страница сайта «Русатом – Аддитивные технологии».
-\newpage % при необходимости можно переносить рисунок на новую страницу
-\begin{figure}[H] % H - рисунок обязательно здесь, или переносится, оставляя пустоту
-\center{\includegraphics[width=1\linewidth]{main1}}
-\center{\includegraphics[width=1\linewidth]{main2}}
-\center{\includegraphics[width=1\linewidth]{main3}}
-\caption{Главная страница сайта «Русатом – Аддитивные технологии»}
-\label{main:image}
-\end{figure}
-
-На рисунке \ref{menu:image} представлен динамический вывод заголовков, включающий в себя искомые фразы при поиске фраз.
-
-\begin{figure}[ht]
-\center{\includegraphics[width=1\linewidth]{menu}}
-\caption{Динамический вывод заголовков}
-\label{menu:image}
-\end{figure}
-
-На рисунке \ref{enter:image} представлен ввод данных для публикации новости.
-
-\begin{figure}[ht]
-\center{\includegraphics[width=1\linewidth]{enter}}
-\caption{Ввод данных для публикации очень-очень длинной, интересной и полезной новости}
-\label{enter:image}
-\end{figure}
-\end{comment}
